@@ -44,23 +44,29 @@ public class SwiftWebviewCookieManagerPlugin: NSObject, FlutterPlugin {
     }
     
     public static func clearCookies(result: @escaping FlutterResult) {
-
-        httpCookieStore!.getAllCookies { (cookies) in
+        httpCookieStore.getAllCookies { cookies in
+            let group = DispatchGroup()
             for cookie in cookies {
-                httpCookieStore!.delete(cookie, completionHandler: nil)
+                group.enter()
+                httpCookieStore.delete(cookie) {
+                    group.leave()
+                }
             }
+            group.wait()
+            
             // delete HTTPCookieStorage all cookies
             if let cookies = HTTPCookieStorage.shared.cookies {
                 for cookie in cookies {
                     HTTPCookieStorage.shared.deleteCookie(cookie)
                 }
             }
+            
             result(nil)
         }
     }
     
     public static func hasCookies(result: @escaping FlutterResult) {
-        httpCookieStore!.getAllCookies { (cookies) in
+        httpCookieStore.getAllCookies { (cookies) in
             var isEmpty = cookies.isEmpty
             if isEmpty {
                 // If it is empty, check whether the HTTPCookieStorage cookie is also empty.
@@ -92,7 +98,7 @@ public class SwiftWebviewCookieManagerPlugin: NSObject, FlutterPlugin {
         
         let cookie = HTTPCookie(properties: properties)!
         
-        httpCookieStore!.setCookie(cookie, completionHandler: {() in
+        httpCookieStore.setCookie(cookie, completionHandler: {() in
             result(true)
         })
     }
@@ -105,7 +111,7 @@ public class SwiftWebviewCookieManagerPlugin: NSObject, FlutterPlugin {
         let host = URL(string: url)?.host           
        
         // fetch and filter cookies from WKHTTPCookieStore
-        httpCookieStore!.getAllCookies { (wkCookies) in
+        httpCookieStore.getAllCookies { (wkCookies) in
                     
             func matches(cookie: HTTPCookie) -> Bool {
                 // nil host means unparseable url or empty string
